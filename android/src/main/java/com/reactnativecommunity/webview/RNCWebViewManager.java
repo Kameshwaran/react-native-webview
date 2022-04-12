@@ -51,6 +51,7 @@ import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewFeature;
 
 import com.facebook.common.logging.FLog;
+import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
 import com.facebook.react.views.scroll.ScrollEvent;
@@ -195,6 +196,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
     settings.setAllowFileAccess(false);
     settings.setAllowContentAccess(false);
+    getModule(reactContext).setWebView(webView);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
       settings.setAllowFileAccessFromFileURLs(false);
       setAllowUniversalAccessFromFileURLs(webView, false);
@@ -206,9 +208,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       new LayoutParams(LayoutParams.MATCH_PARENT,
         LayoutParams.MATCH_PARENT));
 
-    if (ReactBuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+    //if (ReactBuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
       WebView.setWebContentsDebuggingEnabled(true);
-    }
+    //}
 
     webView.setDownloadListener(new DownloadListener() {
       public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
@@ -1490,6 +1492,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     protected boolean hasScrollEvent = false;
     protected boolean nestedScrollEnabled = false;
     protected ProgressChangedFilter progressChangedFilter;
+    public boolean isScrollEnabled = true;
+    public boolean isMultiTouch = false;
 
     /**
      * WebView must be created with an context of the current activity
@@ -1540,9 +1544,21 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+      Log.d("touching", String.valueOf(event.getActionMasked()));
+      int eventCode = event.getActionMasked();
+
+      if (eventCode == MotionEvent.ACTION_DOWN) {
+        isMultiTouch = false;
+      }
+
+      if (eventCode == MotionEvent.ACTION_POINTER_DOWN) {
+        isMultiTouch = true;
+      }
+
       if (this.nestedScrollEnabled) {
         requestDisallowInterceptTouchEvent(true);
       }
+
       return super.onTouchEvent(event);
     }
 
@@ -1661,6 +1677,16 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       !TextUtils.isEmpty(injectedJSBeforeContentLoaded)) {
         evaluateJavascriptWithFallback("(function() {\n" + injectedJSBeforeContentLoaded + ";\n})();");
       }
+    }
+
+    @Override
+    protected boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY, int scrollRangeX, int scrollRangeY, int maxOverScrollX, int maxOverScrollY, boolean isTouchEvent) {
+      if (isScrollEnabled || (!isScrollEnabled && isMultiTouch)) {
+        return super.overScrollBy(deltaX, deltaY, scrollX, scrollY,
+          scrollRangeX, scrollRangeY, maxOverScrollX, maxOverScrollY, isTouchEvent);
+      }
+
+      return false;
     }
 
     public void onMessage(String message) {

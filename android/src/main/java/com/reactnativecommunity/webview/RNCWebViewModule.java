@@ -19,9 +19,12 @@ import androidx.core.content.FileProvider;
 import androidx.core.util.Pair;
 
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.widget.Toast;
 
 import com.facebook.react.bridge.ActivityEventListener;
@@ -53,6 +56,7 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
   private File outputImage;
   private File outputVideo;
   private DownloadManager.Request downloadRequest;
+  private RNCWebViewManager.RNCWebView webView;
 
   protected static class ShouldOverrideUrlLoadingLock {
     protected enum ShouldOverrideCallbackState {
@@ -120,6 +124,11 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
     reactContext.addActivityEventListener(this);
   }
 
+  public void setWebView(RNCWebViewManager.RNCWebView webView) {
+    this.webView = webView;
+    this.webView.setInitialScale(120);
+  }
+
   @Override
   public String getName() {
     return MODULE_NAME;
@@ -147,6 +156,17 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
         lockObject.notify();
       }
     }
+  }
+
+  @ReactMethod
+  public void enableScroll() throws NullPointerException {
+    webView.isScrollEnabled = true;
+  }
+
+  @ReactMethod
+  public void disableScroll() throws NullPointerException {
+    Log.d("disabling", "scroll");
+    webView.isScrollEnabled = false;
   }
 
   public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
